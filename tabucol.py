@@ -1,4 +1,3 @@
-from collections import deque
 from random import randrange
 import networkx as nx 
 
