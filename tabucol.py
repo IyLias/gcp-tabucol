@@ -3,7 +3,7 @@ from random import randrange
 import networkx as nx 
 
 
-def tabucol(graph,k,tabu_size=7,reps=100,max_iterations=10000):
+def tabucol(graph,k,tabu_size=7,reps=100,max_iterations=10000, alpha=0.6):
     
     """ 
     function tabucol() implements tabucol algorithm
@@ -15,6 +15,7 @@ def tabucol(graph,k,tabu_size=7,reps=100,max_iterations=10000):
             tabu_size: size of tabu list 
             reps: number of iterations searching neighbor solution
             max_iterations: maximum iterations of tabucol
+            alpha: parameter of duration equation
 
         return 
 
@@ -24,15 +25,12 @@ def tabucol(graph,k,tabu_size=7,reps=100,max_iterations=10000):
     colors = list(range(k))
     
     # Tabu List 
-    tabu = deque() 
+    tabu = {}
     iterations = 0
     
     # Generate Initial solution
-    solution = dict()
-    for i in range(N):
-        solution[i] = colors[randrange(0, len(colors))]
+    solution = {i: colors[randrange(0, len(colors))] for i in range(N)}
 
-    
     conflicts = 0
     aspiration_level = dict()
     while iterations < max_iterations:
@@ -53,37 +51,48 @@ def tabucol(graph,k,tabu_size=7,reps=100,max_iterations=10000):
         
         # Exploring Neighbor solutions
         new_solution = None
+        found_better = False
         for r in range(reps):
             node = conflicting_nodes[randrange(0,len(conflicting_nodes))]
-
+            
+            # allocate best color: generating minimum conflicts
             new_color = choose_color(graph, solution, node, colors)            
             new_solution = solution.copy()
             new_solution[node] = new_color
 
             new_conflicts = count_conflicts(graph, new_solution)
 
+            L = randint(0,9)
+            # duration = L + f(s)*alpha
+            duration = int(L + new_conflicts * alpha) 
+
             # If found a better solution, 
             if new_conflicts < conflicts:
+                found_better = True
+
                 # if f(s') <= A(f(s))
                 if new_conflicts <= aspiration_level.setdefault(conflicts, conflicts-1):
                     # set A(f(s)) = f(s')-1
                     aspiration_level[conflicts] = new_conflicts - 1
                     
-                    if (node, new_color) in tabu:
-                        tabu.remove((node, new_color))
-
+                    if (node, new_color) in tabu and tabu[(node, new_color)] > iterations:
+                        tabu.pop((node, new_color))
+                    else:
+                        tabu[(node, new_color)] = iterations + duration
+                
+                # case for found good solution but that action is in tabu, then should search more
                 else:
                     if (node, new_color) in tabu:
                         continue
-                
                 break
-
         
-        # After Exploring Neighbor solutions
-        if len(tabu) > tabu_size:
-            tabu.popleft()
 
-        solution = new_solution
+        if found_better:
+            solution = new_solution
+        
+        # Clean up expired tabu entries
+        tabu = {move: expiry for move, expiry in tabu.items() if expiry > iterations}
+
         iterations += 1
         if iterations % 500 == 0:
             print(f"Iteration: {iterations}, Conflicts: {conflicts}")
