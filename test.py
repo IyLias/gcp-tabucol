@@ -79,8 +79,8 @@ def read_graph_from_file(path):
 # main fuhction
 if __name__ == "__main__":
     
-    graph = nx.gnp_random_graph(50,0.5)
-    k = 10
+    graph = nx.gnp_random_graph(150,0.5)
+    k = 20
 
     gcp_solver = GCP_Solver(graph,k,"human")
     gcp_solver.solve()

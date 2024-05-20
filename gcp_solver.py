@@ -14,7 +14,8 @@ class GCP_Solver:
         
         N = graph.order()
         colors = list(range(k))
-
+        
+        # Initialize solution with random colors
         self.solution = {i: randrange(0,k) for i in range(N)}
         
 
@@ -79,7 +80,7 @@ class GCP_Solver:
 
         # Display these info as text on the plot
         n_conflicts = self.count_conflicts(self.graph, solution)
-        n_colors_used = len(set(solution))
+        n_colors_used = len(set(solution.values()))
 
         info_text = f"Graph order: {self.graph.order()}\nGraph size: {self.graph.size()} \n\nNumber of Colors: {n_colors_used} \nConflicts: {n_conflicts}"
         self.ax.text(0.01, 0.99, info_text, transform=self.ax.transAxes, fontsize=10,
@@ -140,6 +141,8 @@ class GCP_Solver:
         tabu = {}
         iterations = 0
 
+        print(f"Initial Solution: {self.solution}")
+        
         conflicts = 0
         aspiration_level = dict()
         while iterations < max_iterations:
@@ -193,6 +196,9 @@ class GCP_Solver:
                     else:
                         if (node, new_color) in tabu:
                             continue
+                        else:
+                            tabu[(node, new_color)] = iterations + duration
+
                     break
 
 
@@ -238,14 +244,14 @@ class GCP_Solver:
         if node is None:
             for node in graph.nodes():
                 for neighbor in graph.neighbors(node):
-                    if self.solution[node] == self.solution[neighbor]:
+                    if solution[node] == solution[neighbor]:
                         conflicts += 1
             
             conflicts = conflicts // 2
 
         else:
             for neighbor in graph.neighbors(node):
-                if self.solution[node] == self.solution[neighbor]:
+                if solution[node] == solution[neighbor]:
                     conflicts += 1
 
         return conflicts
@@ -279,7 +285,9 @@ class GCP_Solver:
         best_color = solution[node]
         for color in colors:
             if color != solution[node]:
-                conflicts = self.count_conflicts(graph, solution,node)
+                temp_solution = solution.copy()
+                temp_solution[node] = color
+                conflicts = self.count_conflicts(graph, temp_solution,node)
                 if conflicts < min_conflicts:
                     min_conflicts = conflicts
                     best_color = color
