@@ -16,14 +16,14 @@ class GCP_Solver:
         colors = list(range(k))
         
         # Initialize solution with random colors
-        self.solution = {i: randrange(0,k) for i in range(N)}
+        self.solution = np.random.randint(0,self.k, size=N, dtype=np.int32)
         
 
         assert render_mode is not None, "render mode should be designated"
         self.render_mode = render_mode
 
         self.color_map = None
-        self.layout = nx.spring_layout(self.graph)
+        self.layout = nx.spring_layout(self.graph,k=0.1)
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         plt.ion()
     
@@ -56,7 +56,7 @@ class GCP_Solver:
         #fig.tight_layout()
         #ax.axis("off")
 
-        node_colors = [self.color_map[solution[node]] for node in solution]
+        node_colors = [self.color_map[node] for node in solution]
 
         edge_colors = [
             "#ff0000" if solution[x] == solution[y] else "#000000"
@@ -80,7 +80,7 @@ class GCP_Solver:
 
         # Display these info as text on the plot
         n_conflicts = self.count_conflicts(self.graph, solution)
-        n_colors_used = len(set(solution.values()))
+        n_colors_used = len(np.unique(self.solution))
 
         info_text = f"Graph order: {self.graph.order()}\nGraph size: {self.graph.size()} \n\nNumber of Colors: {n_colors_used} \nConflicts: {n_conflicts}"
         self.ax.text(0.01, 0.99, info_text, transform=self.ax.transAxes, fontsize=10,
@@ -116,7 +116,7 @@ class GCP_Solver:
 
 
 
-    def tabucol(self,graph,k,tabu_size=7,reps=100,max_iterations=3000, alpha=0.6):
+    def tabucol(self,graph,k,tabu_size=7,reps=100,max_iterations=1000, alpha=0.6):
 
         """
         function tabucol() implements tabucol algorithm
@@ -209,11 +209,11 @@ class GCP_Solver:
             tabu = {move: expiry for move, expiry in tabu.items() if expiry > iterations}
 
             iterations += 1
-            if iterations % 500 == 0:
-                print(f"Iteration: {iterations}, Conflicts: {conflicts}")
-                print(f"Solution: {self.solution}")
-                if iterations % 1000 == 0:
-                    self.render(self.solution)
+            #if iterations % 500 == 0:
+            print(f"Iteration: {iterations}, Conflicts: {conflicts}")
+            print(f"Solution: {self.solution}")
+            if iterations % 10 == 0:
+                self.render(self.solution)
 
         print("final solution: ",self.solution)
         # After all iterations, return solution
