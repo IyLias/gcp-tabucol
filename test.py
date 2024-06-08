@@ -1,7 +1,7 @@
 from gcp_solver import GCP_Solver
 import networkx as nx
 import random
-
+import argparse
 
 def load_testcase(file):
     graph = nx.Graph()
@@ -74,15 +74,25 @@ def read_graph_from_file(path):
     return graph
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="GCP-solver")
+    parser.add_argument("--is_read_file", type=bool, required=True, help="whether using graph file")
+    parser.add_argument("--graph_path", type=str, required=True, help="Path to the graph file")
+    parser.add_argument("--graph_type", type=int, required=True, help="0 for random, 4 for flat, 5 for le450, 6 for queen, 7 for games120 and 8 for myciel")
+    parser.add_argument("--nodes", type=int, required=True, help="Number of nodes")
+    parser.add_argument("--k", type=int, required=True, help="Number of colors")
+    parser.add_argument("--probability", type=float, required=True, help="probability for generating edges")
+    parser.add_argument("--is_track", type=bool, required=True, help="whether tracking to WanDB")
+
+    return parser.parse_args()
 
 
 # main fuhction
 if __name__ == "__main__":
     
-    graph = nx.gnp_random_graph(100,0.5)
-    k = 60
+    args = parse_arguments()
 
-    gcp_solver = GCP_Solver(graph,k,"human")
+    gcp_solver = GCP_Solver(args.is_read_file,args.graph_path,args.graph_type,args.nodes,args.probability,args.k,args.is_track,"human","tabucol")
     gcp_solver.solve()
     
 

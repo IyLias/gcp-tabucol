@@ -4,29 +4,118 @@ import matplotlib.pyplot as plt
 import random
 from random import randrange
 
+import time
+import wandb
+from torch.utils.tensorboard import SummaryWriter
+
+import math
+from util import readDIMACS_graph
 
 class GCP_Solver:
 
-    def __init__(self, graph, k, render_mode):
-
-        self.graph = graph 
+    def __init__(self, is_read_file, graph_path, graph_type, node, prob, k, is_track, render_mode, algorithm):
+        
+        self.graph_type = graph_type
+        
+        if is_read_file:
+            self.graph = readDIMACS_graph(graph_path)
+        else:
+            self.graph = self.generate_graph(graph_type,node, prob)
+        
+        self.N = node
+        self.p = prob
         self.k = k
         
-        N = graph.order()
+        self.is_track = False
+        self.algorithm = algorithm
+        
         colors = list(range(k))
         
         # Initialize solution with random colors
-        self.solution = np.random.randint(0,self.k, size=N, dtype=np.int32)
+        self.solution = np.random.randint(0,self.k, size=self.N, dtype=np.int32)
         
 
         assert render_mode is not None, "render mode should be designated"
         self.render_mode = render_mode
-
+        
+        # render setting 
         self.color_map = None
         self.layout = nx.spring_layout(self.graph,k=0.1)
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         plt.ion()
     
+        # wandb setting
+        if self.is_track == True:
+            print("is_track True")
+            run_name = self.set_run_name(graph_type, self.N, prob, k)
+            wandb.init(
+                project="GCP-Heuristics",
+
+                config={
+                    "algorithm": "tabucol",
+                    "reps": 100,
+                    "max_iterations": 10000,
+                    "alpha": 0.6
+                },
+                sync_tensorboard=True,
+                name=run_name,
+                monitor_gym=True,
+                save_code=True
+            )
+
+            self.writer = SummaryWriter(f"runs/{run_name}")
+
+    
+    def generate_graph(self,graph_type, nodes, prob):
+        graph = None
+
+        if graph_type == 0:
+            graph = nx.gnp_random_graph(nodes, prob)
+        elif graph_type == 1:
+            graph = nx.empty_graph(n=nodes)
+        elif graph_type == 2:
+            graph = nx.complete_graph(n=nodes)
+        elif graph_type == 3:
+            graph = nx.petersen_graph()
+        elif graph_type == 4:
+            graph = nx.cycle_graph(n=nodes)
+        
+
+        return graph
+
+
+    
+    def set_run_name(self,graph_type, nodes, prob, ncolors): 
+    
+        run_name = f"{int(time.time())}"
+        #if args.random_graph == True:
+
+        # DSJCn.x(random graph: Erdos-Renyi model) 
+        if graph_type == 0:
+            run_name = f"G({nodes},{prob})k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 1:
+            run_name = f"O_{nodes}__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 2:
+            run_name = f"K_{nodes}__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 3:
+            run_name = f"Petersen__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 4:
+            run_name = f"flat__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 5:
+            run_name = f"le450__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 6:
+            n = int(math.sqrt(nodes))
+            run_name = f"queen{n}_{n}__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 7:
+            run_name = f"games120__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        elif graph_type == 8:
+            run_name = f"myciel{nodes}__k{ncolors}__{self.algorithm}__{int(time.time())}"
+        
+
+        print(run_name)
+        return run_name
+
+
 
 
     def render(self,solution):
@@ -116,7 +205,7 @@ class GCP_Solver:
 
 
 
-    def tabucol(self,graph,k,tabu_size=7,reps=100,max_iterations=1000, alpha=0.6):
+    def tabucol(self,graph,k,tabu_size=7,reps=100,max_iterations=10000, alpha=0.6):
 
         """
         function tabucol() implements tabucol algorithm
@@ -158,12 +247,12 @@ class GCP_Solver:
             conflicting_nodes = list(conflicting_nodes)
             # Exit Condition
             if conflicts == 0:
+                print("proper coloring found!!")
                 break
 
 
             # Exploring Neighbor solutions
             new_solution = None
-            found_better = False
             for r in range(reps):
                 node = conflicting_nodes[randrange(0,len(conflicting_nodes))]
 
@@ -180,8 +269,6 @@ class GCP_Solver:
 
                 # If found a better solution,
                 if new_conflicts < conflicts:
-                    found_better = True
-
                     # if f(s') <= A(f(s))
                     if new_conflicts <= aspiration_level.setdefault(conflicts, conflicts-1):
                         # set A(f(s)) = f(s')-1
@@ -202,18 +289,20 @@ class GCP_Solver:
                     break
 
 
-            if found_better:
-                self.solution = new_solution
+            self.solution = new_solution
 
             # Clean up expired tabu entries
             tabu = {move: expiry for move, expiry in tabu.items() if expiry > iterations}
 
             iterations += 1
-            #if iterations % 500 == 0:
-            print(f"Iteration: {iterations}, Conflicts: {conflicts}")
-            print(f"Solution: {self.solution}")
             if iterations % 10 == 0:
-                self.render(self.solution)
+                print(f"Iteration: {iterations}, Conflicts: {conflicts}")
+                #self.writer.add_scalar("charts/conflicts", conflicts, iterations)
+                #self.writer.add_scalar("charts/colors_used", len(np.unique(self.solution)), iterations) 
+                if self.is_track:
+                    wandb.log({"Iterations":iterations, "Conflicts":conflicts})
+                if iterations % 100 == 0:
+                    self.render(self.solution)
 
         print("final solution: ",self.solution)
         # After all iterations, return solution
@@ -304,5 +393,17 @@ class GCP_Solver:
         """
 
         self.tabucol(self.graph, self.k)
+        
+        self.close()
 
 
+
+    def close(self):
+        """
+        function close() organizes and closes functions
+
+        """
+        
+        if self.is_track:
+            self.writer.close()
+            wandb.finish()
