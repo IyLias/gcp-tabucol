@@ -5,6 +5,18 @@ We implemented tabucol algorithm using python and C++ each.
 The main idea is referred from **Using Tabu Search Techniques for Graph Coloring A. Hertz and D. de Werra, Lausanne Received May 5, 1987**
 
 
+<br><br>
+
+## TODO 
+
+* Tabucol Structure, Pseudocode
+
+* show tabucol results on various DIMACS graphs
+
+
+
+
+
 
 
 <br><br>
