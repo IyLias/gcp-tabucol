@@ -40,11 +40,19 @@ vector<vector<int>> readDIMACS_graph(const string& graph_file_path) {
 }
 
 
-int main(){
+int main(int argc, char* argv[]){
+ 
+ if(argc != 3){
+    cerr << "Usage: " << argv[0] << " <graph_file_path> <num_colors>" << endl;
+    return EXIT_FAILURE;
+ }
 
- vector<vector<int>> test_graph = readDIMACS_graph("graph_data/queen9_9.col");
+ string graph_file_path = argv[1];
+ int num_colors = stoi(argv[2]);
 
- GCP_Solver gcp_solver = GCP_Solver(test_graph,10);
+ vector<vector<int>> test_graph = readDIMACS_graph(graph_file_path);
+
+ GCP_Solver gcp_solver = GCP_Solver(test_graph,num_colors);
  gcp_solver.solve();
 
 
