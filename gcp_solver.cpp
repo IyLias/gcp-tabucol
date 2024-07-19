@@ -3,13 +3,15 @@
 
 
 GCP_Solver::GCP_Solver(const vector<vector<int>>& target_graph, int k, string algorithm)
-: k(k), algorithm(algorithm){
+: k(k), solution(target_graph.size(), 0), algorithm(algorithm){
     this->nodes = target_graph.size();
     //printf("constructor Node: %d\n",this->nodes);
 
     this->graph.resize(nodes, vector<int>(nodes, 0));
     this->graph = target_graph; 
 
+    for(int i=0;i<nodes;i++)
+	this->solution[i] = rand() % k;
 
     std::srand(std::time(nullptr)); // initialize random seed
 }
@@ -37,14 +39,14 @@ void GCP_Solver::print_solution(const vector<int>& solution){
 
 
 
-std::pair<vector<int>,int> GCP_Solver::solve(const vector<int>& solution){
+std::pair<vector<int>,int> GCP_Solver::solve(){
 
     int reward=0;
     if (algorithm == "tabucol")
 	//printf("tabucol starting..\n");
-    	return tabucol(solution, k);
+    	return tabucol(this->solution, k);
 
-    return {solution, reward};
+    return {this->solution, reward};
 }
 
 
@@ -64,7 +66,7 @@ std::pair<vector<int>,int> GCP_Solver::tabucol(const vector<int>& solution, int 
 
             return
 
-                result_solution: final solution applied tabucol
+                solution: final solution applied tabucol
     */
     int initial_conflicts = count_conflicts(solution);
     printf("Iterations: 0, Conflicts: %d\n",initial_conflicts);
@@ -114,7 +116,6 @@ std::pair<vector<int>,int> GCP_Solver::tabucol(const vector<int>& solution, int 
 	   new_solution[node] = new_color;
 
 	   int new_conflicts = count_conflicts(new_solution);
-
 	   
 	   int L = randDis(gen);
 	   int duration = int(L + new_conflicts * alpha);
@@ -198,7 +199,7 @@ int GCP_Solver::count_conflicts(const vector<int>& solution, int node){
     int conflicts = 0;
     if(node == -1){
         for (int u=0;u<this->nodes;u++){
-	    for (int v=0; v<this->nodes; v++){
+	    for (int v = u+1; v<this->nodes;v++){
 		  if(this->graph[u][v] && (solution[u] == solution[v])){
 			conflicts += 1;
 		  }
@@ -209,7 +210,7 @@ int GCP_Solver::count_conflicts(const vector<int>& solution, int node){
 
     }else{
 
-	for (int v=0; v < nodes ; v++){
+	for (int v=0; v<this->nodes;v++){
 	    if (this->graph[node][v] && (solution[node] == solution[v])){
 		  conflicts += 1;
 	    }
@@ -253,20 +254,21 @@ int GCP_Solver::choose_color(const vector<int>& solution, int node, float p){
     iota(colors.begin(), colors.end(), 0);    
     
     double rand_prob = static_cast<double>(std::rand()) / RAND_MAX;
-    bool choose_random = (rand_prob < p);
+    bool choose_random = (rand_prob > p);
 
     if (choose_random){
-	vector<int> available_colors;
-	for (int color : colors){
-	    if (color != solution[node])
-		available_colors.push_back(color);
-	}
+      vector<int> available_colors;
+      for (int color : colors){
+ 	if (color != solution[node])
+	   available_colors.push_back(color);
+      }
 	
-	if (!available_colors.empty()){
-	   int rand_idx = std::rand() % available_colors.size();
-	   return available_colors[rand_idx];
-	} else
-	   return best_color;
+      if (!available_colors.empty()){
+	  int rand_idx = std::rand() % available_colors.size();
+	  return available_colors[rand_idx];
+      } else
+	  return best_color;
+
 
     } else {
 	// choose most promising color (that decreases conflicts most)
@@ -280,15 +282,15 @@ int GCP_Solver::choose_color(const vector<int>& solution, int node, float p){
 		    min_conflicts = conflicts;
 		    best_color = color;
 	   	}
-
            }
 
         }
 
     }
 
-
     return best_color;
+
+
 }
 
 
