@@ -43,7 +43,7 @@ vector<vector<int>> readDIMACS_graph(const string& graph_file_path) {
 int main(int argc, char* argv[]){
  
  if(argc != 3){
-    cerr << "Usage: " << argv[0] << " <graph_file_path> <num_colors>" << endl;
+    cerr << "Usage: " << argv[0] << " <graph_file_path> <num_colors> <algorithm>" << endl;
     return EXIT_FAILURE;
  }
 
@@ -52,11 +52,8 @@ int main(int argc, char* argv[]){
 
  vector<vector<int>> test_graph = readDIMACS_graph(graph_file_path);
 
- GCP_Solver gcp_solver = GCP_Solver(test_graph,num_colors);
+ GCP_Solver gcp_solver = GCP_Solver(test_graph,num_colors,"pg_tabucol");
  gcp_solver.solve();
-
-
-
 
  return 0;
 }

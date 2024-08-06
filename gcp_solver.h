@@ -11,6 +11,7 @@
 #include <random>
 #include <ctime>
 #include <cstdlib>
+#include <deque>
 #include <fstream>
 #include <sstream>
 
@@ -31,14 +32,20 @@ class GCP_Solver{
 
  public:
 
-   GCP_Solver(const vector<vector<int>>& target_graph, int k, string algorithm="tabucol");
+   GCP_Solver(const vector<vector<int>>& target_graph, int k, string algorithm="pg_tabucol");
 
    std::pair<vector<int>, int> solve();
 
 
  private:
 
-   std::pair<vector<int>, int> tabucol(const vector<int>& solution, int k, int tabu_size=7, int reps=150, int max_iterations=3000, float alpha=0.6);
+   vector<int> tabucol(const vector<int>& solution, int k, int tabu_size=7, int reps=256, int max_iterations=2500, float alpha=0.6);
+
+   vector<int> position_guided_tabucol(const vector<int>& solution, int k, int tabu_size=7, int reps=256, int max_iterations=2500, float alpha=0.6);
+
+   int get_distance(const vector<int>& coloring1, const vector<int>& coloring2);
+
+   bool is_already_visited(const vector<int>& solution);
 
    int count_conflicts(const vector<int>& solution, int node=-1);
 
@@ -50,14 +57,21 @@ class GCP_Solver{
 
    int nodes;
    int k;
+   int R;
+
+   vector<int> solution;
 
    vector<vector<int>> graph;
 
    string algorithm;
-
-   vector<int> solution;
-
+   
+   // tabu list for original tabu search
    unordered_map<pair<int,int>,int,pair_hash> tabu_list;
+   
+   // tabu list for PGTS
+   deque<pair<vector<int>, int>> pg_tabu_list;
+
+   vector<vector<int>> recorded_solutions;
 };
 
 #endif
